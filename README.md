@@ -13,6 +13,6 @@ Add the library in your application classpath and add the `classpath*:sql-stats-
 ## Usage
 The data is not collected by default, so once your application has started, you have to start it through the JMX interface:
 
-![Jconsole](site/images/jconsole.png "JConsole")
+![Jconsole](http://i.imgur.com/lYjjd.png "JConsole")
 
 The metrics are available in the attributes section. For query counting during a use case observation, it can be convenient to reset the current query count before, just invoke the operation.
