@@ -37,10 +37,15 @@ public class SqlInterceptor implements ApplicationContextAware {
     @Around("execution(* javax.sql.DataSource.getConnection(..))")
     public Object doIt2(ProceedingJoinPoint pjp) throws Throwable {
 
-        Connection conn = (Connection) pjp.proceed();
+        Connection conn = null;
 
         if (recording) {
-            conn = (Connection) applicationContext.getBean("connectionWrapper", conn);
+            long delay = System.nanoTime();
+            conn = (Connection) applicationContext.getBean("connectionWrapper", pjp.proceed());
+            delay = System.nanoTime() - delay;
+            controller.setLastConnectionTiming(delay);
+        }else{
+            conn = (Connection) pjp.proceed();
         }
 
         return conn;

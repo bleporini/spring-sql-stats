@@ -22,12 +22,27 @@ public class StatController {
 
     private long activeConnectionCount = 0;
     private long totalConnectionUsed=0;
-    
+    private long lastConnectionTiming = 0;
+    private long averageConnectionTiming = 0;
+
     public void newConnection(){
         activeConnectionCount++;
         totalConnectionUsed++;
-    }   
-    
+    }
+
+    public long getLastConnectionTiming() {
+        return lastConnectionTiming;
+    }
+
+    /**
+     *
+     * @param lastConnectionTiming in nano second.
+     */
+    public void setLastConnectionTiming(long lastConnectionTiming) {
+        this.lastConnectionTiming = lastConnectionTiming;
+        averageConnectionTiming = (averageConnectionTiming * totalConnectionUsed + lastConnectionTiming)/totalConnectionUsed +1;
+    }
+
     public void connectionClosed(){
         activeConnectionCount--;
     }
@@ -36,6 +51,11 @@ public class StatController {
         queryCount++;
     }
 
+    @ManagedAttribute
+    public long getAverageConnectionTiming(){
+        return averageConnectionTiming;
+    }
+    
     @ManagedOperation
     public void resetConnectionCounts(){
         activeConnectionCount = 0;

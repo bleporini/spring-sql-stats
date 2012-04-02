@@ -8,6 +8,10 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import javax.sql.DataSource;
 
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertTrue;
+
 /**
  * @author blep
  *         Date: 23/03/12
@@ -18,10 +22,32 @@ import javax.sql.DataSource;
 public class SqlInterceptorTest {
     @Autowired
     private DataSource dataSource;
+    
+    @Autowired
+    private StatController controller;
 
     @Test
     public void testGetLogWriter() throws Exception {
         dataSource.getLogWriter();
+    }
+
+    @Test
+    public void testShouldTime() throws Exception {
+        controller.startRecording();
+        
+        dataSource.getConnection().close();
+
+        long averageConnectionTiming = controller.getAverageConnectionTiming();
+        System.out.println("controller.getAverageConnectionTiming() = " + averageConnectionTiming);
+
+        assertTrue(averageConnectionTiming > 0);
+        
+        dataSource.getConnection().close();
+        System.out.println("controller.getAverageConnectionTiming() = " + controller.getAverageConnectionTiming());
+
+        assertFalse(controller.getAverageConnectionTiming() == averageConnectionTiming);
         
     }
+
+    
 }
