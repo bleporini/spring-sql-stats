@@ -16,3 +16,7 @@ The data is not collected by default, so once your application has started, you 
 ![Jconsole](http://i.imgur.com/lYjjd.png "JConsole")
 
 The metrics are available in the attributes section. For query counting during a use case observation, it can be convenient to reset the current query count before, just invoke the operation.
+
+--- 
+
+Thanks to ej-technologies for the [![JProfiler](http://www.ej-technologies.com/images/headlines2/3453392302.png "JProfiler")](http://www.ej-technologies.com/products/jprofiler/overview.html) open source licence.
