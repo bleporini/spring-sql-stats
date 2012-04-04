@@ -1,9 +1,6 @@
 package org.blep.spring.sql.stats;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jmx.export.annotation.ManagedAttribute;
-import org.springframework.jmx.export.annotation.ManagedOperation;
-import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,9 +8,8 @@ import org.springframework.stereotype.Component;
  *         Date: 18/03/12
  *         Time: 09:15
  */
-@ManagedResource
 @Component
-public class StatController {
+public class StatController implements StatControllerMBean {
     
     @Autowired
     private SqlInterceptor sqlInterceptor;
@@ -51,43 +47,43 @@ public class StatController {
         queryCount++;
     }
 
-    @ManagedAttribute
+    @Override
     public long getAverageConnectionTiming(){
         return averageConnectionTiming;
     }
     
-    @ManagedOperation
+    @Override
     public void resetConnectionCounts(){
         activeConnectionCount = 0;
         totalConnectionUsed = 0;
     }
 
-    @ManagedAttribute
+    @Override
     public long getQueryCount() {
         return queryCount;
     }
 
-    @ManagedOperation
+    @Override
     public void startRecording(){
         sqlInterceptor.setRecording(true);
     }
 
-    @ManagedOperation
+    @Override
     public void stopRecording(){
         sqlInterceptor.setRecording(false);
     }
 
-    @ManagedOperation
+    @Override
     public void resetCounter(){
         queryCount = 0;
     }
 
-    @ManagedAttribute
+    @Override
     public long getActiveConnectionCount() {
         return activeConnectionCount;
     }
 
-    @ManagedAttribute
+    @Override
     public long getTotalConnectionUsed() {
         return totalConnectionUsed;
     }
