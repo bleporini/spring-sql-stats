@@ -1,5 +1,8 @@
 package org.blep.spring.sql.stats;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +23,14 @@ public class StatController implements StatControllerMBean {
     private long totalConnectionUsed=0;
     private long lastConnectionTiming = 0;
     private long averageConnectionTiming = 0;
+
+    @Getter @Setter @AllArgsConstructor
+    public static class SlowestSql{
+        private String sql;
+        private long duration;
+    }
+
+
 
     public void newConnection(){
         activeConnectionCount++;
