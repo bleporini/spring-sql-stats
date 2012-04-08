@@ -62,7 +62,7 @@ public class ConnectionWrapper implements Connection, ApplicationContextAware, I
 
     @Override
     public PreparedStatement prepareStatement(String s) throws SQLException {
-        return (PreparedStatement) context.getBean("preparedStatementWrapper", delegate.prepareStatement(s));
+        return (PreparedStatement) context.getBean("preparedStatementWrapper", delegate.prepareStatement(s), s);
     }
 
     @Override

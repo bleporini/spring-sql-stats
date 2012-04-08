@@ -15,13 +15,18 @@ import java.sql.PreparedStatement;
 @Scope("prototype")
 class PreparedStatementWrapper extends StatementWrapper implements PreparedStatement{
 
+    private final String sql;
+
     @Delegate
     private PreparedStatement delegate;
 
-    PreparedStatementWrapper(PreparedStatement preparedStatement) {
+    PreparedStatementWrapper(PreparedStatement preparedStatement, String sql) {
         super(preparedStatement);
+        this.sql = sql;
         delegate =  preparedStatement;
     }
 
-
+    public String getSql() {
+        return sql;
+    }
 }
