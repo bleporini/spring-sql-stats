@@ -13,6 +13,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author blep
@@ -25,18 +26,18 @@ public class StatController implements StatControllerMBean {
     @Autowired
     private SqlInterceptor sqlInterceptor;
 
-    private long queryCount = 0;
+    private AtomicLong queryCount = new AtomicLong(0);
 
-    private long activeConnectionCount = 0;
-    private long totalConnectionUsed = 0;
+    private AtomicLong activeConnectionCount = new AtomicLong(0);
+    private AtomicLong totalConnectionUsed = new AtomicLong(0);
     private long lastConnectionTiming = 0;
     private long averageConnectionTiming = 0;
+    private long fasterSlowest = Long.MIN_VALUE;
 
     //TODO: make it settable 
     private int MAX_SLOWEST_QUERIES = 10;
 
     private Map<String, Long> slowestQueries = Collections.synchronizedMap(new HashMap<String, Long>(MAX_SLOWEST_QUERIES));
-//    private Map<String, Long> slowestQueries = new HashMap<String, Long>(MAX_SLOWEST_QUERIES);
 
 
     /**
@@ -44,8 +45,7 @@ public class StatController implements StatControllerMBean {
      * @param time in nanoseconds
      */
     public void recordQueryTime(final String sql, final Long time) {
-        if (StringUtils.isBlank(sql) || time == null) {
-            // doing nothing and not bugging application code with useless exceptions.
+        if (StringUtils.isBlank(sql) || time == null || time<fasterSlowest) {
             return;
         }
 
@@ -62,6 +62,8 @@ public class StatController implements StatControllerMBean {
             }
 
             slowestQueries.put(sql, time);
+            //If you're faster than the faster then you're the faster!
+            fasterSlowest = time<fasterSlowest?time:fasterSlowest;
         }
     }
 
@@ -70,8 +72,8 @@ public class StatController implements StatControllerMBean {
     }
 
     public void newConnection() {
-        activeConnectionCount++;
-        totalConnectionUsed++;
+        activeConnectionCount.incrementAndGet();
+        totalConnectionUsed.incrementAndGet();
     }
 
     public long getLastConnectionTiming() {
@@ -83,15 +85,15 @@ public class StatController implements StatControllerMBean {
      */
     public void setLastConnectionTiming(long lastConnectionTiming) {
         this.lastConnectionTiming = lastConnectionTiming;
-        averageConnectionTiming = (averageConnectionTiming * totalConnectionUsed + lastConnectionTiming) / totalConnectionUsed + 1;
+        averageConnectionTiming = (averageConnectionTiming * totalConnectionUsed.get() + lastConnectionTiming) / totalConnectionUsed.get() + 1;
     }
 
     public void connectionClosed() {
-        activeConnectionCount--;
+        activeConnectionCount.decrementAndGet();
     }
 
     public void newQuery() {
-        queryCount++;
+        queryCount.incrementAndGet();
     }
 
     @Override
@@ -101,13 +103,13 @@ public class StatController implements StatControllerMBean {
 
     @Override
     public void resetConnectionCounts() {
-        activeConnectionCount = 0;
-        totalConnectionUsed = 0;
+        activeConnectionCount.set(0);
+        totalConnectionUsed.set(0);
     }
 
     @Override
     public long getQueryCount() {
-        return queryCount;
+        return queryCount.get();
     }
 
     @Override
@@ -122,16 +124,16 @@ public class StatController implements StatControllerMBean {
 
     @Override
     public void resetCounter() {
-        queryCount = 0;
+        queryCount.set(0);
     }
 
     @Override
     public long getActiveConnectionCount() {
-        return activeConnectionCount;
+        return activeConnectionCount.get();
     }
 
     @Override
     public long getTotalConnectionUsed() {
-        return totalConnectionUsed;
+        return totalConnectionUsed.get();
     }
 }

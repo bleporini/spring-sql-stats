@@ -12,12 +12,14 @@ import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.ObjectName;
 import javax.sql.DataSource;
+import java.io.OutputStream;
 import java.lang.management.ManagementFactory;
 import java.sql.Connection;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
@@ -31,10 +33,10 @@ import static org.junit.Assert.*;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {"classpath:sql-stats-context.xml", "classpath:test-application-context.xml"})
 public class StatControllerTest {
-    
+
     @Autowired
     private DataSource dataSource;
-    
+
     @Autowired
     private StatController controller;
 
@@ -50,60 +52,64 @@ public class StatControllerTest {
         controller.recordQueryTime("sql8", 1008l);
         controller.recordQueryTime("sql9", 1009l);
         controller.recordQueryTime("sql10", 1010l);
-        
+
         controller.recordQueryTime("select 1", 10l);
         controller.recordQueryTime("select 2", 2000l);
 
         assertFalse(controller.getSlowestQueries().containsKey("select 1"));
         assertTrue(controller.getSlowestQueries().containsKey("select 2"));
         assertEquals(controller.getSlowestQueries().get("select 2"), new Long(2000l));
-        
+
 //        fail("to be continued");
     }
-    
+
     @AllArgsConstructor
-    private static class QueryRecorder implements Runnable{
+    private static class QueryRecorder implements Runnable {
         final static Random random = new Random();
-        private StatController controller;
-        private static int cpt= 0;
+        private final StatController controller;
+        private static final AtomicInteger cpt = new AtomicInteger(0);
+
 
         @Override
         public void run() {
             for (int i = 0; i < 100; i++) {
-                long l = random.nextLong();
+                long l = random.nextLong()%100;
                 controller.recordQueryTime("sql " + l, l);
-                cpt++;
+                cpt.incrementAndGet();
             }
         }
+
     }
 
     @Rule
-    public  JunitTimer junitTimer = new JunitTimer();
+    public JunitTimer junitTimer = new JunitTimer();
 
 
     /**
      * Test for profiling
+     *
      * @throws Exception
      */
     @Test
     public void testConcurrency() throws Exception {
-        ExecutorService executorService = Executors.newFixedThreadPool(100);
-        
+        ExecutorService executorService = Executors.newFixedThreadPool(400);
 
         for (int i = 0; i < 100; i++) {
             executorService.submit(new QueryRecorder(controller));
         }
 
-        /*
-        while (true) {
+        /*boolean j = true;
+        while (j) {
             executorService.submit(new QueryRecorder(controller));
+        }*/
 
-        } */
-
+//        Thread.sleep(3000);
         executorService.shutdown();
         executorService.awaitTermination(1, TimeUnit.DAYS);
+
         System.out.println("QR = " + QueryRecorder.cpt);
-        //Thread.sleep(30000);
+        assertEquals(QueryRecorder.cpt.get(), 10000);
+//          Thread.sleep(30000);
     }
 
     @Test
@@ -124,12 +130,12 @@ public class StatControllerTest {
 
         Connection connection = dataSource.getConnection();
 
-        assertEquals(activeConnectionCount+1,statController.getActiveConnectionCount());
+        assertEquals(activeConnectionCount + 1, statController.getActiveConnectionCount());
 
         connection.close();
 
         assertEquals(activeConnectionCount, statController.getActiveConnectionCount());
     }
-    
-    
+
+
 }
