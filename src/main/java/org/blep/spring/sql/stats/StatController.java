@@ -2,9 +2,7 @@ package org.blep.spring.sql.stats;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -13,6 +11,9 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -32,12 +33,81 @@ public class StatController implements StatControllerMBean {
     private AtomicLong totalConnectionUsed = new AtomicLong(0);
     private long lastConnectionTiming = 0;
     private long averageConnectionTiming = 0;
-    private long fasterSlowest = Long.MIN_VALUE;
 
-    //TODO: make it settable 
-    private int MAX_SLOWEST_QUERIES = 10;
+    private BlockingQueue<TimedQuery> queue;
 
-    private Map<String, Long> slowestQueries = Collections.synchronizedMap(new HashMap<String, Long>(MAX_SLOWEST_QUERIES));
+
+
+    @RequiredArgsConstructor
+    private static class BackGroundQueryRecorder implements Runnable{
+        @NonNull
+        private BlockingQueue<TimedQuery> queue;
+        private long fasterSlowest = Long.MIN_VALUE;
+
+        private Map<String, Long> slowestQueries = new HashMap<String, Long>(MAX_SLOWEST_QUERIES);
+
+
+        //TODO: make it settable
+        private static int MAX_SLOWEST_QUERIES = 10;
+
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    final TimedQuery timedQuery = queue.take();
+
+                    if (StringUtils.isBlank(timedQuery.sql) || timedQuery.time == null || timedQuery.time<fasterSlowest) {
+                        return;
+                    }
+
+                    Map<String, Long> slowerQueries = Maps.filterEntries(slowestQueries, new Predicate<Map.Entry<String, Long>>() {
+                        @Override
+                        public boolean apply(@Nullable Map.Entry<String, Long> stringLongEntry) {
+                            return stringLongEntry.getValue() > timedQuery.time;
+                        }
+                    });
+
+                    if (slowerQueries.size() >= MAX_SLOWEST_QUERIES) {
+                        continue; // The current query cannot be promoted as on of the slowest queries
+                    }
+
+                    slowestQueries.put(timedQuery.sql, timedQuery.time);
+                    //If you're faster than the faster then you're the faster!
+                    fasterSlowest = timedQuery.time<fasterSlowest?timedQuery.time:fasterSlowest;
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public StatController() {
+        queue = new LinkedBlockingQueue<TimedQuery>();
+        queryRecorder = new BackGroundQueryRecorder(queue);
+        Thread t = new Thread(queryRecorder, "BackGroundQueryRecorder");
+        t.setDaemon(true);
+        t.setPriority(Thread.MIN_PRIORITY);
+        t.start();
+    }
+
+    @AllArgsConstructor
+    @ToString
+    private class TimedQuery{
+        private String sql;
+        private Long time;
+    }
+
+    private BackGroundQueryRecorder queryRecorder;
+
+    /**
+     *
+     * @return the number of query waiting for processing
+     */
+    public int inProcessCount() {
+        return queue.size();
+    }
 
 
     /**
@@ -45,30 +115,12 @@ public class StatController implements StatControllerMBean {
      * @param time in nanoseconds
      */
     public void recordQueryTime(final String sql, final Long time) {
-        if (StringUtils.isBlank(sql) || time == null || time<fasterSlowest) {
-            return;
-        }
-
-        synchronized (slowestQueries) {
-            Map<String, Long> slowerQueries = Maps.filterEntries(slowestQueries, new Predicate<Map.Entry<String, Long>>() {
-                @Override
-                public boolean apply(@Nullable Map.Entry<String, Long> stringLongEntry) {
-                    return stringLongEntry.getValue() > time;
-                }
-            });
-
-            if (slowerQueries.size() >= MAX_SLOWEST_QUERIES) {
-                return; // The current query cannot be promoted as on of the slowest queries
-            }
-
-            slowestQueries.put(sql, time);
-            //If you're faster than the faster then you're the faster!
-            fasterSlowest = time<fasterSlowest?time:fasterSlowest;
-        }
+        if( !queue.offer(new TimedQuery(sql, time)))
+            System.err.println("Problem during insertion");
     }
 
     public Map<String, Long> getSlowestQueries() {
-        return Collections.unmodifiableMap(slowestQueries);
+        return Collections.unmodifiableMap(queryRecorder.slowestQueries);
     }
 
     public void newConnection() {

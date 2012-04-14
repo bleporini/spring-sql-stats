@@ -55,6 +55,19 @@ public class StatControllerTest {
 
         controller.recordQueryTime("select 1", 10l);
         controller.recordQueryTime("select 2", 2000l);
+        controller.recordQueryTime("select 2", 2000l);
+        controller.recordQueryTime("select 2", 2000l);
+        controller.recordQueryTime("select 2", 2000l);
+        controller.recordQueryTime("select 2", 2000l);
+        controller.recordQueryTime("select 2", 2000l);
+        controller.recordQueryTime("select 2", 2000l);
+        controller.recordQueryTime("select 2", 2000l);
+
+
+        while(controller.inProcessCount()!=0){
+            Thread.currentThread().sleep(3);
+        }
+
 
         assertFalse(controller.getSlowestQueries().containsKey("select 1"));
         assertTrue(controller.getSlowestQueries().containsKey("select 2"));
@@ -76,6 +89,11 @@ public class StatControllerTest {
                 long l = random.nextLong()%100;
                 controller.recordQueryTime("sql " + l, l);
                 cpt.incrementAndGet();
+                try {
+                    Thread.currentThread().sleep(2);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
@@ -92,16 +110,18 @@ public class StatControllerTest {
      */
     @Test
     public void testConcurrency() throws Exception {
-        ExecutorService executorService = Executors.newFixedThreadPool(400);
+        ExecutorService executorService = Executors.newFixedThreadPool(100);
 
         for (int i = 0; i < 100; i++) {
             executorService.submit(new QueryRecorder(controller));
         }
 
-        /*boolean j = true;
+/*
+        boolean j = true;
         while (j) {
             executorService.submit(new QueryRecorder(controller));
-        }*/
+        }
+*/
 
 //        Thread.sleep(3000);
         executorService.shutdown();
