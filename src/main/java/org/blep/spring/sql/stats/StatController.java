@@ -119,6 +119,7 @@ public class StatController implements StatControllerMBean {
             System.err.println("Problem during insertion");
     }
 
+    @Override
     public Map<String, Long> getSlowestQueries() {
         return Collections.unmodifiableMap(queryRecorder.slowestQueries);
     }
@@ -128,6 +129,7 @@ public class StatController implements StatControllerMBean {
         totalConnectionUsed.incrementAndGet();
     }
 
+    @Override
     public long getLastConnectionTiming() {
         return lastConnectionTiming;
     }
@@ -137,7 +139,7 @@ public class StatController implements StatControllerMBean {
      */
     public void setLastConnectionTiming(long lastConnectionTiming) {
         this.lastConnectionTiming = lastConnectionTiming;
-        averageConnectionTiming = (averageConnectionTiming * totalConnectionUsed.get() + lastConnectionTiming) / totalConnectionUsed.get() + 1;
+        averageConnectionTiming = (averageConnectionTiming * totalConnectionUsed.get() + lastConnectionTiming) / (totalConnectionUsed.get() + 1);
     }
 
     public void connectionClosed() {
@@ -155,8 +157,9 @@ public class StatController implements StatControllerMBean {
 
     @Override
     public void resetConnectionCounts() {
-        activeConnectionCount.set(0);
         totalConnectionUsed.set(0);
+        lastConnectionTiming=0;
+        averageConnectionTiming=0;
     }
 
     @Override

@@ -4,6 +4,8 @@ import org.springframework.jmx.export.annotation.ManagedAttribute;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
 
+import java.util.Map;
+
 /**
  * @author blep
  *         Date: 03/04/12
@@ -34,4 +36,8 @@ public interface StatControllerMBean {
 
     @ManagedAttribute
     long getTotalConnectionUsed();
+
+    long getLastConnectionTiming();
+
+    Map<String, Long> getSlowestQueries();
 }

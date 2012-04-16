@@ -36,7 +36,10 @@ public class StatementInterceptor {
 
     private Object proceed(ProceedingJoinPoint pjp, String sql) throws Throwable {
         controller.newQuery();
-        return pjp.proceed();
+        long delay  = System.nanoTime();
+        Object proceed = pjp.proceed();
+        controller.recordQueryTime(sql, System.nanoTime() - delay);
+        return proceed;
 
     }
 }

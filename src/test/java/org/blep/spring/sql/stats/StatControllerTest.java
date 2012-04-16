@@ -41,6 +41,38 @@ public class StatControllerTest {
     private StatController controller;
 
     @Test
+    public void testResetConnectionCounts() throws Exception {
+        controller.resetConnectionCounts();
+        controller.startRecording();
+        dataSource.getConnection().close();
+        Connection connection = dataSource.getConnection();
+
+        assertTrue(controller.getAverageConnectionTiming() > 0);
+        assertTrue(controller.getActiveConnectionCount()>=1);
+        assertTrue(controller.getLastConnectionTiming()>0);
+
+        connection.close();
+
+        controller.resetConnectionCounts();
+        assertEquals(0,controller.getAverageConnectionTiming());
+        assertEquals(0,controller.getLastConnectionTiming());
+    }
+
+    @Test
+    public void testShouldNotResetActiveConnection() throws Exception {
+        controller.resetConnectionCounts();
+        controller.startRecording();
+        Connection connection = dataSource.getConnection();
+
+        assertTrue( controller.getActiveConnectionCount()>=1);
+
+        controller.resetConnectionCounts();
+
+        assertTrue( controller.getActiveConnectionCount()>=1);
+
+    }
+
+    @Test
     public void testSlowQueries() throws Exception {
         controller.recordQueryTime("sql1", 1001l);
         controller.recordQueryTime("sql2", 1002l);
